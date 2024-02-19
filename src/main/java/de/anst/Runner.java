@@ -5,26 +5,21 @@ package de.anst;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.Map;
+import java.util.Calendar;
 
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.http.client.ClientHttpRequestFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.yaml.snakeyaml.parser.ParserException;
 
+import biweekly.component.VEvent;
 import lombok.extern.java.Log;
-import net.fortuna.ical4j.data.CalendarBuilder;
-import net.fortuna.ical4j.data.ParserException;
-import net.fortuna.ical4j.model.Calendar;
 
 /**
  * RunnerEnv created 10.02.2024 by
  * <a href="mailto:antonius.steinkamp@gmail.com">Antonius</a>
  *
  */
-@Component
+// @Component
 @Log
 public class Runner implements CommandLineRunner {
 
@@ -40,17 +35,27 @@ public class Runner implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		byte[] forObject = restTemplate.getForObject(schulferienNiedersachsen2024, byte[].class);
 		log.info(forObject.length + "Bytes geladen");
-		
+/*
 		InputStream inputStream = new ByteArrayInputStream(forObject);
-		
-        CalendarBuilder builder = new CalendarBuilder();
-        try {
-        Calendar calendar = builder.build(inputStream);
-        
-        calendar.getComponents().forEach( calComponent -> log.info(calComponent.toString()) );
-        } catch (ParserException ex) {
-        	log.warning("Could not understand " + new String(forObject));
-        }
-	}
 
+		CalendarBuilder builder = new CalendarBuilder();
+		try {
+			Calendar calendar = builder.build(inputStream);
+
+			calendar.getComponents().forEach(calComponent -> {
+				log.info(calComponent.toString());
+				PropertyList<Property> properties = calComponent.getProperties();
+				VEvent vevent = new VEvent(properties);
+
+				log.info("Start: " + vevent.getStartDate().getDate() + " Ende:" + vevent.getEndDate().getDate());
+
+				for (Property property : properties) {
+					log.info("Name: " + property.getName() + " Value: " + property.getValue());
+				}
+			});
+		} catch (ParserException ex) {
+			log.warning("Could not understand " + new String(forObject));
+		}
+*/
+	}
 }

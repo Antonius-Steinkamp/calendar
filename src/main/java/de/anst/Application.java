@@ -33,12 +33,15 @@ private static final long serialVersionUID = Application.class.hashCode();
 		return new RestTemplate(clientHttpRequestFactory());
 	}
 
-	private ClientHttpRequestFactory clientHttpRequestFactory() {
+	private static ClientHttpRequestFactory clientHttpRequestFactory() {
 		SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+		
 		// Konfigurieren Sie hier optional die Eigenschaften der Factory, z.B.
 		// Verbindungszeitüberschreitung usw.
+		
 		factory.setConnectTimeout(5000);
 		factory.setReadTimeout(5000);
+		
 		return factory;
 	}
 
