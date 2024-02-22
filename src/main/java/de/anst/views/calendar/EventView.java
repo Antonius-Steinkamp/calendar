@@ -55,8 +55,8 @@ import lombok.extern.java.Log;
  * created calendar into the view. Also registers a dates rendered listener to
  * update the toolbar.
  */
-@PageTitle("AKalender")
-@Route(value = "acalendar")
+@PageTitle("Kalender")
+@Route(value = "calendar")
 @RouteAlias(value = "")
 
 // @Getter

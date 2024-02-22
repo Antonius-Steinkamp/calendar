@@ -13,6 +13,11 @@
 		<vaadin.version>24.3.5</vaadin.version>
 		<fullcalendar.version>6.2.1-SNAPSHOT</fullcalendar.version>
 		<spring-boot.version>3.1.4</spring-boot.version>
+
+		<jib.version>3.4.0</jib.version>
+		<base.image>eclipse-temurin:17-jre@sha256:bfb9eb9a4a3f29575c900085fce271932692e9bc653e06fc6cfa3a7df1f849d3</base.image>
+		<docker-hub.repo>registry.hub.docker.com/antonius</docker-hub.repo>
+
 	</properties>
 
 	<parent>
@@ -70,17 +75,17 @@
 			<groupId>org.vaadin.stefan</groupId>
 			<artifactId>fullcalendar2</artifactId>
 			<version>6.0.4</version>
-<!--
+			<!--
 			<version>6.2.1-SNAPSHOT</version>
 -->
 
 		</dependency>
 
-<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310 -->
-<dependency>
-    <groupId>com.fasterxml.jackson.datatype</groupId>
-    <artifactId>jackson-datatype-jsr310</artifactId>
-</dependency>
+		<!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310 -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.projectlombok</groupId>
@@ -146,6 +151,28 @@
 					</execution>
 				</executions>
 			</plugin>
+
+					<plugin>
+						<groupId>com.google.cloud.tools</groupId>
+						<artifactId>jib-maven-plugin</artifactId>
+						<version>${jib.version}</version>
+						<configuration>
+							<from>
+								<image>${base.image}</image>
+							</from>
+							<to>
+								<image>${docker-hub.repo}/${project.name}</image>
+							</to>
+							<container>
+								<ports>
+									<port>8080</port>
+								</ports>
+								<mainClass>${project.groupId}.Application</mainClass>
+								<creationTime>${maven.build.timestamp}</creationTime>
+							</container>
+						</configuration>
+					</plugin>
+
 		</plugins>
 	</build>
 
