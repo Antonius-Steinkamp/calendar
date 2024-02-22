@@ -3,12 +3,12 @@
  */
 package de.anst.views.calendar;
 
-import java.time.DayOfWeek;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import org.vaadin.stefan.fullcalendar.BrowserTimezoneObtainedEvent;
 import org.vaadin.stefan.fullcalendar.BusinessHours;
@@ -25,7 +25,6 @@ import org.vaadin.stefan.fullcalendar.TimeslotClickedEvent;
 import org.vaadin.stefan.fullcalendar.TimeslotsSelectedEvent;
 import org.vaadin.stefan.fullcalendar.ViewSkeletonRenderedEvent;
 import org.vaadin.stefan.fullcalendar.WeekNumberClickedEvent;
-import org.vaadin.stefan.fullcalendar.dataprovider.InMemoryEntryProvider;
 
 /**
  * AbstractCalendarView created 19.02.2024 by <a href="mailto:antonius.steinkamp@gmail.com">Antonius</a>
@@ -48,7 +47,6 @@ import com.vaadin.flow.router.RouteAlias;
 
 import elemental.json.Json;
 import elemental.json.JsonObject;
-import lombok.Getter;
 import lombok.extern.java.Log;
 
 /**
@@ -70,17 +68,16 @@ public class EventView extends VerticalLayout {
 	// private final FullCalendar calendar;
 
 	private final EntryProvider entryProvider;
-	
-	public EventView(EntryProvider entryProvider) {
-		this.entryProvider = entryProvider;
-		
-		
-		FullCalendar calendar = FullCalendarBuilder.create()
-				.withInitialOptions(createDefaultInitialOptions())
-				// .withInitialEntries(initialEntries())
-				.withEntryLimit(3).build();
-		
-		log.info("ctor " + calendar);
+
+	public EventView() {
+		this.entryProvider = new EntryProvider();
+
+		FullCalendar calendar = FullCalendarBuilder.create().withInitialOptions(createDefaultInitialOptions())
+				.withInitialEntries(initialEntries()).withEntryLimit(3).build();
+
+		log.info(calendar.getClass().getSimpleName() + " Version "
+				+ FullCalendar.class.getPackage().getImplementationVersion());
+		log.info(log.getClass().getSimpleName() + " Version " + log.getClass().getPackage().getImplementationVersion());
 
 		calendar.setBusinessHours(
 				new BusinessHours(LocalTime.of(9, 0), LocalTime.of(17, 0), BusinessHours.DEFAULT_BUSINESS_WEEK));
@@ -90,22 +87,28 @@ public class EventView extends VerticalLayout {
 		calendar.addEntryResizedListener(this::onEntryResized);
 		calendar.addDayNumberClickedListener(this::onDayNumberClicked);
 		calendar.addBrowserTimezoneObtainedListener(this::onBrowserTimezoneObtained);
-		calendar.addMoreLinkClickedListener(this::onMoreLinkClicked);
+		calendar.addMoreLinkClickedListener(e -> {
+			calendar.getElement().setProperty("moreLinkClickAction", "day");
+		});
 		calendar.addTimeslotClickedListener(this::onTimeslotClicked);
 		calendar.addTimeslotsSelectedListener(this::onTimeslotsSelected);
 		calendar.addViewSkeletonRenderedListener(this::onViewSkeletonRendered);
 		calendar.addDatesRenderedListener(this::onDatesRendered);
 		calendar.addWeekNumberClickedListener(this::onWeekNumberClicked);
 
-		VerticalLayout titleAndDescription = new VerticalLayout();
-		titleAndDescription.setSpacing(false);
-		titleAndDescription.setPadding(false);
+		calendar.setSlotMinTime(LocalTime.of(7, 0));
+		calendar.setSlotMaxTime(LocalTime.of(17, 0));
 
-		Component descriptionElement = createDescriptionElement();
+		VerticalLayout titleLayout = new VerticalLayout();
+		titleLayout.setSpacing(false);
+		titleLayout.setPadding(false);
+
+		Component descriptionElement = new H2("Termine für Höltinghausen");
+		;
 		if (descriptionElement != null) {
-			titleAndDescription.add(descriptionElement);
-			titleAndDescription.setHorizontalComponentAlignment(Alignment.STRETCH, descriptionElement);
-			add(titleAndDescription);
+			titleLayout.add(descriptionElement);
+			titleLayout.setHorizontalComponentAlignment(Alignment.CENTER, descriptionElement);
+			add(titleLayout);
 		}
 		add(initDateItems(calendar));
 		add(calendar);
@@ -118,15 +121,17 @@ public class EventView extends VerticalLayout {
 
 	private List<Entry> initialEntries() {
 		List<Entry> result = new ArrayList<>();
-		
-		for (CalendarInfo ci: entryProvider.getVisibleCalendars()) {
+
+		for (CalendarInfo ci : entryProvider.getVisibleCalendars()) {
 			log.info(ci.toString());
 			result.addAll(ci.getEntries());
 		}
-		
+
 		return result;
 	}
-	
+
+	private Button buttonDatePicker;
+
 	private Component initDateItems(FullCalendar calendar) {
 		var hv = new HorizontalLayout();
 		Button buttonLeft = new Button(VaadinIcon.ANGLE_LEFT.create(), e -> calendar.previous());
@@ -141,8 +146,8 @@ public class EventView extends VerticalLayout {
 		gotoDate.setWidth("0px");
 		gotoDate.setHeight("0px");
 		gotoDate.setWeekNumbersVisible(true);
-		add(gotoDate);
-		var buttonDatePicker = new Button(VaadinIcon.CALENDAR.create());
+		// add(gotoDate);
+		buttonDatePicker = new Button(VaadinIcon.CALENDAR.create());
 		buttonDatePicker.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
 		buttonDatePicker.getElement().appendChild(gotoDate.getElement());
 		buttonDatePicker.addClickListener(event -> gotoDate.open());
@@ -161,13 +166,32 @@ public class EventView extends VerticalLayout {
 			log.info("Added: " + e.getAddedSelection());
 
 			var ep = calendar.getEntryProvider().asInMemory();
-			e.getAddedSelection().forEach(cal -> ep.addEntries(entryProvider.byName(cal).getEntries()) );
-			e.getRemovedSelection().forEach(cal -> ep.removeEntries(entryProvider.byName(cal).getEntries()) );
-			
+			e.getAddedSelection().forEach(cal -> ep.addEntries(entryProvider.byName(cal).getEntries()));
+			e.getRemovedSelection().forEach(cal -> ep.removeEntries(entryProvider.byName(cal).getEntries()));
+
 			ep.refreshAll();
 		});
 
 		hv.add(calendars);
+		Map<String, String> ansichten = Map.of("dayGridMonth", "Monatsansicht", "dayGridWeek", "Wochenansicht",
+				"dayGridYear", "Jahresansicht", "listDay", "Liste Tag", "listWeek", "Liste Woche", "listMonth",
+				"Liste Monat", "listYear", "Liste Jahr");
+
+		List<String> viewNames = List.of("dayGridMonth", "dayGridWeek", "dayGridYear", "listDay", "listWeek",
+				"listMonth", "listYear");
+
+		var views = new ComboBox<String>("Views", viewNames);
+		views.setValue("dayGridMonth");
+		views.setItemLabelGenerator(e -> ansichten.get(e));
+		views.addValueChangeListener(e -> {
+			log.info(e.toString());
+			String neuerViewName = e.getValue();
+			log.info("Neue View ist: " + neuerViewName);
+			calendar.getElement().callJsFunction("changeView", neuerViewName);
+		});
+
+		hv.add(views);
+
 		hv.setDefaultVerticalComponentAlignment(Alignment.BASELINE);
 
 		return hv;
@@ -183,10 +207,6 @@ public class EventView extends VerticalLayout {
 
 	protected boolean isToolbarSettingsAvailable() {
 		return true;
-	}
-
-	protected void postConstruct(FullCalendar calendar) {
-		// NOOP
 	}
 
 	/**
@@ -213,6 +233,13 @@ public class EventView extends VerticalLayout {
 	 */
 	protected void onEntryClick(EntryClickedEvent event) {
 		log.info("onEntryClick" + event.toString());
+        DemoDialog dialog = new DemoDialog(event.getEntry());
+        /*
+        dialog.setSaveConsumer(this::onEntryChanged);
+        dialog.setDeleteConsumer(e -> onEntriesRemoved(Collections.singletonList(e)));
+        */
+        dialog.open();
+
 	}
 
 	/**
@@ -260,6 +287,10 @@ public class EventView extends VerticalLayout {
 	 */
 	protected void onDatesRendered(DatesRenderedEvent event) {
 		log.info("onDatesRendered" + event.toString());
+		if (buttonDatePicker != null) {
+			buttonDatePicker.setText(event.getIntervalStart()
+					.format(DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(Locale.getDefault())));
+		}
 	}
 
 	/**
@@ -325,21 +356,9 @@ public class EventView extends VerticalLayout {
 	}
 
 	protected Component createDescriptionElement() {
-		String description = createDescription();
-		if (description == null) {
-			return null;
-		}
-		var descriptionElement = new H2(description);
-//        descriptionElement.getStyle() // TODO move to css at some point
-//                .set("font-size", "0.8rem")
-//                .set("color", "#666");
+		var descriptionElement = new H2("Termine für Höltinghausen");
 
 		return descriptionElement;
 	}
-
-	protected String createDescription() {
-		return "Mein Kalender";
-	}
-
 
 }

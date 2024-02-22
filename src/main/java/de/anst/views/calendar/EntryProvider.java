@@ -3,10 +3,18 @@
  */
 package de.anst.views.calendar;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import lombok.extern.java.Log;
 
@@ -19,39 +27,55 @@ import lombok.extern.java.Log;
 @Log
 public class EntryProvider {
 
-
-	private static List<CalendarInfo> knownCalendars = new ArrayList<>();
+	private List<CalendarInfo> knownCalendars = new ArrayList<>();
 
 	public EntryProvider() {
-		
-		log.info("ctor");
-		
-		knownCalendars.add(new CalendarInfo(
-				"https://www.schulferien.org/media/ical/deutschland/ferien_hamburg_2024.ics?k=GKM6i4aBFk00t5tmjXTiMagrQxEqDa7N4woJ1tndlcq_UYgvclY2qQvCLvIBRYA_QZOSdTH4Y9JoZ80zQ9b-YRcwUQPZ6qJpIRdvnALid6I",
-				"Ferien Hamburg", "#FFFF00"));
-		knownCalendars.add(new CalendarInfo(
-				"https://www.schulferien.org/media/ical/deutschland/ferien_niedersachsen_2024.ics?k=gyvpNtMh00w2kp316O1E0V1eHKhSsIpcqNDSJPZJyJk_meIdQtCwS9u6yR7VtgADuMTwx_ZrVrL5-mSLxNBjGJpydnalWpGvg9yThK1pVIA",
-				"Ferien Niedersachsen", "orange", true));
-		knownCalendars.add(new CalendarInfo(
-				"https://calendar.google.com/calendar/ical/d8c9955e5934337b9874197e78013a8db9dd0af8f261698ec22751d7ca4422c6%40group.calendar.google.com/public/basic.ics",
-				"Höltinghausen", "dodgerblue"));
-		knownCalendars.add(new CalendarInfo(
-				"https://calendar.google.com/calendar/ical/d8c9955e5934337b9874197e78013a8db9dd0af8f261698ec22751d7ca4422c6%40group.calendar.google.com/private-99bccb85948ae4cfff56b87c64f04a8f/basic.ics",
-				"Höltinghausen privat", "mediumseagreen"));
-		knownCalendars
-				.add(new CalendarInfo("https://emstek.gremien.info/webkalender/webkalender.php", "Gemeinde", "gray"));
-		knownCalendars.add(
-				new CalendarInfo("https://rest.konzertmeister.app/api/v1/ical/15bae1d1-09c1-429f-8555-6c711d790c68",
-						"Musikkorps", "slateblue"));
-		knownCalendars.add(new CalendarInfo(
-				"https://calendar.google.com/calendar/ical/903410c2c244ecd2489ee2b178554da3f0d15bca7eca51b600230eb2795f07e5%40group.calendar.google.com/public/basic.ics",
-				"Jagdhörner", "green"));
 
-		knownCalendars.add(
-				new CalendarInfo("https://www.feiertage-deutschland.de/content/kalender-download/force-download.php",
-						"Feiertage", "violet"));
+		log.info("ctor");
+
+		readCalendars();		
 	}
 
+	private static ObjectMapper getObjectMapper() {
+		final ObjectMapper om = new ObjectMapper();
+		om.registerModule(new JavaTimeModule());
+
+		om.configure(SerializationFeature.INDENT_OUTPUT, true);
+
+		return om;
+
+	}
+
+	private static String fileName = System.getProperty("user.home") + "/Calendars.json";
+
+	@SuppressWarnings("unused")
+	private void writeCalendars() {
+		try {
+			getObjectMapper().writeValue(new File(fileName), knownCalendars);
+			log.info("Known Calendars written to " + fileName);
+		} catch (IOException e) {
+			log.warning(e.getLocalizedMessage());
+		}
+		
+	}
+	
+	private void readCalendars() {
+		ObjectMapper om = getObjectMapper();
+		
+		try {
+			knownCalendars = om.readValue(new File(fileName), om.getTypeFactory().constructCollectionType(List.class, CalendarInfo.class));
+		} catch (JsonMappingException e) {
+			log.warning(e.getLocalizedMessage());
+		} catch (JsonProcessingException e) {
+			log.warning(e.getLocalizedMessage());
+		} catch (IOException e) {
+			log.warning(e.getLocalizedMessage());
+		}
+		
+		log.info("found " + knownCalendars.size() + " calendars in file " + fileName);
+		
+	}
+	
 	public List<CalendarInfo> getCalendars() {
 		return knownCalendars;
 	}
@@ -62,8 +86,8 @@ public class EntryProvider {
 
 	public List<CalendarInfo> getVisibleCalendars() {
 		List<CalendarInfo> result = new ArrayList<>();
-		for (CalendarInfo ci: knownCalendars) {
-			if ( ci.isVisible()) {
+		for (CalendarInfo ci : knownCalendars) {
+			if (ci.isVisible()) {
 				result.add(ci);
 			}
 		}
@@ -74,10 +98,9 @@ public class EntryProvider {
 	public List<String> getVisibleCalendarNames() {
 		return getVisibleCalendars().stream().map(c -> c.getDescription()).toList();
 	}
-	
+
 	public CalendarInfo byName(String name) {
 		return knownCalendars.stream().filter(c -> c.getDescription().equals(name)).findFirst().get();
 	}
-
 
 }

@@ -14,8 +14,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import org.vaadin.stefan.fullcalendar.Entry;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import biweekly.Biweekly;
 import biweekly.ICalendar;
@@ -24,20 +27,35 @@ import biweekly.property.DateEnd;
 import biweekly.util.ICalDate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.java.Log;
 
 /**
- * CalendarInfo created 21.02.2024 by <a href="mailto:antonius.steinkamp@gmail.com">Antonius</a>
+ * CalendarInfo created 21.02.2024 by
+ * <a href="mailto:antonius.steinkamp@gmail.com">Antonius</a>
  *
  */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 @Log
-public  class CalendarInfo {
+public class CalendarInfo {
+	/**
+	 * String URL {@value #URL}
+	 * since 22.02.2024
+	 */
+	public static final String URL = "Url";
+	/**
+	 * String LOCATION {@value #LOCATION}
+	 * since 22.02.2024
+	 */
+	public static final String LOCATION = "Location";
 	private String url;
 	private String description;
 	private String color;
 	private boolean visible;
+	
+	@JsonIgnore
 	private List<Entry> entries = new ArrayList<>();
 
 	@Override
@@ -50,7 +68,7 @@ public  class CalendarInfo {
 		this.description = description;
 		this.color = color;
 		visible = false;
-		log.info("ctor" + this);
+		log.info("ctor " + this);
 	}
 
 	public CalendarInfo(String url, String description, String color, boolean isVisible) {
@@ -58,10 +76,10 @@ public  class CalendarInfo {
 		this.description = description;
 		this.color = color;
 		this.visible = isVisible;
-		log.info("ctor" + this);
+		log.info("ctor " + this);
 	}
 
-	synchronized public List<Entry> getEntries() {
+	public List<Entry> getEntries() {
 		log.info("getEntries " + toString());
 		if (entries.isEmpty()) {
 			entries.addAll(createEntries(this));
@@ -70,28 +88,42 @@ public  class CalendarInfo {
 
 		return entries;
 	}
-	private static List<Entry> createEntries(CalendarInfo url) {
-		log.info("createEntries " + url);
-		List<Entry> result = new ArrayList<>();
-		try {
-			String icsDatei = downloadFileToString(url.getUrl());
-			for (ICalendar ical : Biweekly.parse(new String(icsDatei)).all()) {
 
-				if (ical == null) {
-					log.info("No Calendar for " + url.getDescription());
-					continue;
-				}
-				for (VEvent vEvent : ical.getEvents()) {
-					Entry entry = createEntryFrom(vEvent);
-					entry.setColor(url.getColor());
-					if (entry != null) {
-						result.add(entry);
+	private static long timeTaskMillis(Runnable taskToTime) {
+		long startTime = System.currentTimeMillis();
+		try {
+			taskToTime.run();
+		} catch (Exception ex) {
+			log.info("Task failed " + ex.toString());
+		}
+		return System.currentTimeMillis() - startTime;
+	}
+
+	private static List<Entry> createEntries(CalendarInfo url) {
+
+		List<Entry> result = new ArrayList<>();
+		long millis = timeTaskMillis(() -> {
+			try {
+				String icsDatei = downloadFileToString(url.getUrl());
+				for (ICalendar ical : Biweekly.parse(new String(icsDatei)).all()) {
+
+					if (ical == null) {
+						log.info("No Calendar for " + url.getDescription());
+						continue;
+					}
+					for (VEvent vEvent : ical.getEvents()) {
+						Entry entry = createEntryFrom(vEvent);
+						entry.setColor(url.getColor());
+						if (entry != null) {
+							result.add(entry);
+						}
 					}
 				}
+			} catch (IOException e) {
+				log.warning("No Calendar for " + url.getDescription() + e.getLocalizedMessage());
 			}
-		} catch (IOException e) {
-			log.warning("No Calendar for " + url.getDescription() + e.getLocalizedMessage());
-		}
+		});
+		log.info("createEntries " + url + " : " + millis + " millis");
 
 		return result;
 
@@ -117,8 +149,8 @@ public  class CalendarInfo {
 	}
 
 	private static Entry createEntryFrom(VEvent vEvent) {
-		Entry result = new Entry();
-
+		Entry result = new Entry(UUID.randomUUID().toString());
+		
 		ICalDate dateStartValue = vEvent.getDateStart().getValue();
 
 		Instant startInstant = dateStartValue.toInstant();
@@ -136,6 +168,46 @@ public  class CalendarInfo {
 		result.setEnd(endTime);
 
 		result.setTitle(vEvent.getSummary().getValue());
+		var description = vEvent.getDescription();
+		if (description != null) {
+			result.setDescription(description.getValue());
+		}
+		var location = vEvent.getLocation();
+		if (location != null) {
+			result.setCustomProperty(LOCATION, location.getValue());
+			log.info(LOCATION + " is "+location.getValue());
+		}
+		var comments = vEvent.getComments();
+		if (comments != null ) {
+			comments.forEach(c -> log.info(c.toString()));
+		}
+		
+		var attendees = vEvent.getAttendees();
+		if (attendees != null) {
+			attendees.forEach((c -> log.info(c.toString())));
+		}
+		
+		var attachments = vEvent.getAttachments();
+		if (attachments != null) {
+			attachments.forEach((c -> log.info(c.toString())));
+		}
+
+		var url = vEvent.getUrl();
+		if (url != null) {
+			result.setCustomProperty(URL, url.getValue());
+			log.info(URL + " is " +url.getValue());
+			
+		}
+		/*
+		log.info("getDateTimeStamp: " + vEvent.getDateTimeStamp());
+		log.info("getLocation: " + vEvent.getLocation());
+		log.info("getUid: " + vEvent.getUid());
+		log.info("getUrl: " + vEvent.getUrl());
+		log.info("getAttachments: " + vEvent.getAttachments());
+		log.info("getAttendees: " + vEvent.getAttendees());
+		log.info("getComments: " + vEvent.getComments());
+		log.info("getDescription: " + vEvent.getDescription());
+		*/
 
 		return result;
 	}
