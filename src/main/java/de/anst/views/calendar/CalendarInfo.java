@@ -232,6 +232,7 @@ public class CalendarInfo {
 			log.info("Wiederholung: " + AUtils.getAllGetters(recurrency));
 		}
 		
+		// result.set
 
 		return result;
 	}
