@@ -1,26 +1,24 @@
 package de.anst.views.about;
 
-import org.springframework.boot.SpringBootVersion;
+import java.text.DecimalFormat;
+import java.util.Locale;
 
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.UI;
-import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.dom.ThemeList;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
-import com.vaadin.flow.theme.lumo.Lumo;
 import com.vaadin.flow.theme.lumo.LumoUtility.Margin;
 
 import lombok.extern.java.Log;
 
 @PageTitle("About")
 @Route(value = "about")
+// @RouteAlias(value = "/")
 @Log
 public class AboutView extends VerticalLayout {
 
@@ -30,6 +28,8 @@ public class AboutView extends VerticalLayout {
 	private static final long serialVersionUID = 1L;
 
 	public AboutView() {
+		super();
+		log.info(AboutView.class.getName() + " ctor");
 		setSpacing(false);
 		setPadding(false);
 
@@ -44,26 +44,39 @@ public class AboutView extends VerticalLayout {
 		add(img);
 
 		add(createHtml("Demo von <a href=\"http://antonius.hopto.org\" target=\"_blank\">Antonius</a>"));
-//		add(createHtml("Demo vom " + AUtils.timeOfMillisString(maxLastModified)	+ " von <a href=\"http://antonius.hopto.org\" target=\"_blank\">Antonius</a>"));
 		add(new Paragraph("mit"));
+		try {
+			Class<?> clazz = Class.forName("com.vaadin.flow.component.Component");
+			add(createHtml( "Vaadin  Version " + clazz.getPackage().getImplementationVersion()));
+		} catch (ClassNotFoundException ex) {
+			// isnich
+		}
+
+		try {
+			Class<?> clazz = Class.forName("org.vaadin.crudui.crud.impl.GridCrud");
+			add(createHtml(clazz.getSimpleName() + " Version " + clazz.getPackage().getImplementationVersion()));
+		} catch (ClassNotFoundException ex) {
+			// isnich
+		}
+		try {
+			Class<?> clazz = Class.forName("org.springframework.boot.SpringBootVersion");
+			add(createHtml(clazz.getSimpleName() + " Version " + clazz.getPackage().getImplementationVersion()));
+		} catch (ClassNotFoundException ex) {
+			// isnich
+		}
+
+		add(createHtml("Browserlocale: " + UI.getCurrent().getLocale() + " Systemlocale " + Locale.getDefault()));
 		add(createHtml("Java Version " + System.getProperty("java.version") + " " + System.getProperty("java.vm.name")
 				+ " " + System.getProperty("java.vm.version") + " " + System.getProperty("java.vm.vendor")));
-		add(createHtml("Vaadin " + com.vaadin.flow.component.Component.class.getPackage().getImplementationVersion()));
-		// add(createHtml("Crud Version " +
-		// GridCrud.class.getPackage().getImplementationVersion()));
-		add(createHtml("Spring Boot Version " + SpringBootVersion.getVersion()));
 		add(createHtml("OS " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " "
-				+ System.getProperty("os.arch") + " " + Runtime.getRuntime().maxMemory() / (1024 * 1024)
-				+ " MB Memory"));
-
+				+ System.getProperty("os.arch")));
+		add(createHtml("Memory free: " + getMemoryInfo() + " MB Memory"));
 
 		setSizeFull();
 		setJustifyContentMode(JustifyContentMode.CENTER);
 		setDefaultHorizontalComponentAlignment(Alignment.CENTER);
 		getStyle().set("text-align", "center");
 	}
-
-	
 
 	/**
 	 * Dekorieren mit einem {@code<div>}
@@ -76,4 +89,18 @@ public class AboutView extends VerticalLayout {
 	private static Html createHtml(String html) {
 		return new Html("<div>" + html + "</div>");
 	}
+
+	private static DecimalFormat format = new DecimalFormat("#,###");
+
+	private static String getMemoryInfo() {
+		System.gc();
+		long freeMemory = Runtime.getRuntime().freeMemory() / 1024;
+		long totalMemory = Runtime.getRuntime().totalMemory() / 1024;
+
+		var result = format.format(freeMemory) + " / " + format.format(totalMemory);
+		// log.info(result);
+
+		return result;
+	}
+
 }

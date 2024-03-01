@@ -25,6 +25,8 @@ import biweekly.ICalendar;
 import biweekly.component.VEvent;
 import biweekly.property.DateEnd;
 import biweekly.util.ICalDate;
+import biweekly.util.Period;
+import de.anst.AUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -50,6 +52,10 @@ public class CalendarInfo {
 	 * since 22.02.2024
 	 */
 	public static final String LOCATION = "Location";
+	
+	public static final String UID = "Uid";
+	public static final String CDATE = "CDATE";
+	
 	private String url;
 	private String description;
 	private String color;
@@ -112,7 +118,7 @@ public class CalendarInfo {
 						continue;
 					}
 					for (VEvent vEvent : ical.getEvents()) {
-						Entry entry = createEntryFrom(vEvent);
+						Entry entry = createEntryOf(vEvent);
 						entry.setColor(url.getColor());
 						if (entry != null) {
 							result.add(entry);
@@ -148,7 +154,7 @@ public class CalendarInfo {
 		return content.toString();
 	}
 
-	private static Entry createEntryFrom(VEvent vEvent) {
+	private static Entry createEntryOf(VEvent vEvent) {
 		Entry result = new Entry(UUID.randomUUID().toString());
 		
 		ICalDate dateStartValue = vEvent.getDateStart().getValue();
@@ -175,8 +181,19 @@ public class CalendarInfo {
 		var location = vEvent.getLocation();
 		if (location != null) {
 			result.setCustomProperty(LOCATION, location.getValue());
-			log.info(LOCATION + " is "+location.getValue());
+			// log.info(LOCATION + " is "+location.getValue());
 		}
+		var uid = vEvent.getUid();
+		if (uid != null) {
+			result.setCustomProperty(UID, uid.getValue());
+			//log.info(UID + " is "+uid.getValue());
+		}
+		var cdate = vEvent.getDateTimeStamp();
+		if (cdate != null) {
+			result.setCustomProperty(CDATE, cdate.getValue());
+			// log.info(CDATE + " is "+cdate.getValue());
+		}
+		
 		var comments = vEvent.getComments();
 		if (comments != null ) {
 			comments.forEach(c -> log.info(c.toString()));
@@ -195,19 +212,26 @@ public class CalendarInfo {
 		var url = vEvent.getUrl();
 		if (url != null) {
 			result.setCustomProperty(URL, url.getValue());
-			log.info(URL + " is " +url.getValue());
-			
+			// log.info(URL + " is " +url.getValue());
 		}
-		/*
-		log.info("getDateTimeStamp: " + vEvent.getDateTimeStamp());
-		log.info("getLocation: " + vEvent.getLocation());
-		log.info("getUid: " + vEvent.getUid());
-		log.info("getUrl: " + vEvent.getUrl());
-		log.info("getAttachments: " + vEvent.getAttachments());
-		log.info("getAttendees: " + vEvent.getAttendees());
-		log.info("getComments: " + vEvent.getComments());
-		log.info("getDescription: " + vEvent.getDescription());
-		*/
+
+		var rrdate = vEvent.getRecurrenceDates();
+		rrdate.forEach(r -> {
+			log.info("Wiederholungstermine: " + AUtils.getAllGetters(r));
+			List<Period> periods = r.getPeriods();
+			for (Period period: periods) {
+				log.info("Periaod: " + AUtils.getAllGetters(period) );
+			}
+		});
+		
+		var rrule = vEvent.getRecurrenceRule();
+		if (rrule != null) {
+			log.info("Wiederholungsregel: " + AUtils.getAllGetters(rrule));
+
+			var recurrency = rrule.getValue();
+			log.info("Wiederholung: " + AUtils.getAllGetters(recurrency));
+		}
+		
 
 		return result;
 	}

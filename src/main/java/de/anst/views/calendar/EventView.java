@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.vaadin.lineawesome.LineAwesomeIcon;
 import org.vaadin.stefan.fullcalendar.BrowserTimezoneObtainedEvent;
 import org.vaadin.stefan.fullcalendar.BusinessHours;
 import org.vaadin.stefan.fullcalendar.DatesRenderedEvent;
@@ -35,10 +36,10 @@ import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.datepicker.DatePicker;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.listbox.MultiSelectListBox;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.PageTitle;
@@ -98,21 +99,19 @@ public class EventView extends VerticalLayout {
 
 		calendar.setSlotMinTime(LocalTime.of(7, 0));
 		calendar.setSlotMaxTime(LocalTime.of(17, 0));
+		
+		calendar.setLocale(Locale.GERMAN);
 
-		VerticalLayout titleLayout = new VerticalLayout();
-		titleLayout.setSpacing(false);
-		titleLayout.setPadding(false);
+		var ueberschrift = new H2("Termine für Höltinghausen") ;
+		add( ueberschrift);
 
-		Component descriptionElement = new H2("Termine für Höltinghausen");
-		;
-		if (descriptionElement != null) {
-			titleLayout.add(descriptionElement);
-			titleLayout.setHorizontalComponentAlignment(Alignment.CENTER, descriptionElement);
-			add(titleLayout);
-		}
-		add(initDateItems(calendar));
+		var controller = initDateItems(calendar);
+		add(controller);
+
 		add(calendar);
 
+		setHorizontalComponentAlignment(Alignment.CENTER, ueberschrift, controller);
+		
 		setFlexGrow(1, calendar);
 		setHorizontalComponentAlignment(Alignment.STRETCH, calendar);
 
@@ -134,9 +133,11 @@ public class EventView extends VerticalLayout {
 
 	private Component initDateItems(FullCalendar calendar) {
 		var hv = new HorizontalLayout();
+		
+		var dater = new HorizontalLayout();
 		Button buttonLeft = new Button(VaadinIcon.ANGLE_LEFT.create(), e -> calendar.previous());
 		buttonLeft.setId("period-previous-button");
-		hv.add(buttonLeft);
+		dater.add(buttonLeft);
 
 		// simulate the date picker light that we can use in polymer
 		DatePicker gotoDate = new DatePicker();
@@ -149,14 +150,20 @@ public class EventView extends VerticalLayout {
 		// add(gotoDate);
 		buttonDatePicker = new Button(VaadinIcon.CALENDAR.create());
 		buttonDatePicker.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
+		// buttonDatePicker.getStyle().set("width", "15em");
 		buttonDatePicker.getElement().appendChild(gotoDate.getElement());
 		buttonDatePicker.addClickListener(event -> gotoDate.open());
-		buttonDatePicker.setWidthFull();
-		hv.add(buttonDatePicker);
-		hv.add(new Button(VaadinIcon.ANGLE_RIGHT.create(), e -> calendar.next()));
+
+		dater.add(buttonDatePicker);
+		
+		dater.add(new Button(VaadinIcon.ANGLE_RIGHT.create(), e -> calendar.next()));
+		
+		hv.add(dater);
+		
 		hv.add(new Button("Heute", e -> calendar.today()));
 
-		var calendars = new MultiSelectComboBox<String>("Verfügbare Kalender");
+		var calendars = new MultiSelectListBox<String>();
+		calendars.setTooltipText("Kalender");
 		calendars.setItems(entryProvider.getCalendarNames());
 		calendars.select(entryProvider.getVisibleCalendarNames());
 
@@ -172,7 +179,6 @@ public class EventView extends VerticalLayout {
 			ep.refreshAll();
 		});
 
-		hv.add(calendars);
 		Map<String, String> ansichten = Map.of("dayGridMonth", "Monatsansicht", "dayGridWeek", "Wochenansicht",
 				"dayGridYear", "Jahresansicht", "listDay", "Liste Tag", "listWeek", "Liste Woche", "listMonth",
 				"Liste Monat", "listYear", "Liste Jahr");
@@ -180,7 +186,7 @@ public class EventView extends VerticalLayout {
 		List<String> viewNames = List.of("dayGridMonth", "dayGridWeek", "dayGridYear", "listDay", "listWeek",
 				"listMonth", "listYear");
 
-		var views = new ComboBox<String>("Views", viewNames);
+		var views = new ComboBox<String>("Ansichten", viewNames);
 		views.setValue("dayGridMonth");
 		views.setItemLabelGenerator(e -> ansichten.get(e));
 		views.addValueChangeListener(e -> {
@@ -190,7 +196,17 @@ public class EventView extends VerticalLayout {
 			calendar.getElement().callJsFunction("changeView", neuerViewName);
 		});
 
-		hv.add(views);
+		SetupDialog setupDialog = new SetupDialog(calendars, views);
+		setupDialog.setDraggable(true);
+		setupDialog.addDialogCloseActionListener((e) -> {
+			e.getSource().close();
+			calendar.getEntryProvider().refreshAll();
+		});
+		setupDialog.setCloseListener( () -> {
+			calendar.getEntryProvider().refreshAll();
+		});
+		hv.add(new Button(LineAwesomeIcon.COG_SOLID.create(), e -> setupDialog.open() ));
+
 
 		hv.setDefaultVerticalComponentAlignment(Alignment.BASELINE);
 
