@@ -3,6 +3,10 @@
  */
 package de.anst.views.calendar;
 
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -80,8 +84,7 @@ public class EventView extends VerticalLayout {
 				+ FullCalendar.class.getPackage().getImplementationVersion());
 		log.info(log.getClass().getSimpleName() + " Version " + log.getClass().getPackage().getImplementationVersion());
 
-		calendar.setBusinessHours(
-				new BusinessHours(LocalTime.of(9, 0), LocalTime.of(17, 0), BusinessHours.DEFAULT_BUSINESS_WEEK));
+		calendar.setBusinessHours(new BusinessHours(LocalTime.of(9, 0), LocalTime.of(17, 0), BusinessHours.DEFAULT_BUSINESS_WEEK));
 
 		calendar.addEntryClickedListener(this::onEntryClick);
 		calendar.addEntryDroppedListener(this::onEntryDropped);
@@ -125,7 +128,17 @@ public class EventView extends VerticalLayout {
 			log.info(ci.toString());
 			result.addAll(ci.getEntries());
 		}
-
+//		
+//		Entry weeklyEntry = new Entry();
+//		
+//		weeklyEntry.setRecurringStart(LocalDateTime.now().minusDays(36));
+//		weeklyEntry.setStart(Instant.now());
+//		weeklyEntry.setEnd(Instant.now().plusSeconds(7200));
+//		
+//		weeklyEntry.setRecurringDaysOfWeek(DayOfWeek.THURSDAY);
+//		
+//		result.add(weeklyEntry);
+	
 		return result;
 	}
 
@@ -162,12 +175,12 @@ public class EventView extends VerticalLayout {
 		
 		hv.add(new Button("Heute", e -> calendar.today()));
 
-		var calendars = new MultiSelectListBox<String>();
-		calendars.setTooltipText("Kalender");
-		calendars.setItems(entryProvider.getCalendarNames());
-		calendars.select(entryProvider.getVisibleCalendarNames());
+		var calendarsList = new MultiSelectListBox<String>();
+		calendarsList.setTooltipText("Kalender");
+		calendarsList.setItems(entryProvider.getCalendarNames());
+		calendarsList.select(entryProvider.getVisibleCalendarNames());
 
-		calendars.addSelectionListener(e -> {
+		calendarsList.addSelectionListener(e -> {
 			log.info("Selected: " + e.getAllSelectedItems().toString());
 			log.info("Removed: " + e.getRemovedSelection());
 			log.info("Added: " + e.getAddedSelection());
@@ -196,7 +209,7 @@ public class EventView extends VerticalLayout {
 			calendar.getElement().callJsFunction("changeView", neuerViewName);
 		});
 
-		SetupDialog setupDialog = new SetupDialog(calendars, views);
+		SetupDialog setupDialog = new SetupDialog(calendarsList, views);
 		setupDialog.setDraggable(true);
 		setupDialog.addDialogCloseActionListener((e) -> {
 			e.getSource().close();

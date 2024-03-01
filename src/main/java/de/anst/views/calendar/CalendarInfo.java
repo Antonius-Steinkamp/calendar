@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -24,6 +25,7 @@ import biweekly.Biweekly;
 import biweekly.ICalendar;
 import biweekly.component.VEvent;
 import biweekly.property.DateEnd;
+import biweekly.util.Frequency;
 import biweekly.util.ICalDate;
 import biweekly.util.Period;
 import de.anst.AUtils;
@@ -88,8 +90,10 @@ public class CalendarInfo {
 	public List<Entry> getEntries() {
 		log.info("getEntries " + toString());
 		if (entries.isEmpty()) {
-			entries.addAll(createEntries(this));
-			log.info("add Entries " + toString());
+			List<Entry> createEntries = createEntries(this);
+			
+			entries.addAll(createEntries);
+			log.info("add " + createEntries.size() +  " Entries");
 		}
 
 		return entries;
@@ -108,7 +112,7 @@ public class CalendarInfo {
 	private static List<Entry> createEntries(CalendarInfo url) {
 
 		List<Entry> result = new ArrayList<>();
-		long millis = timeTaskMillis(() -> {
+		// long millis = timeTaskMillis(() -> {
 			try {
 				String icsDatei = downloadFileToString(url.getUrl());
 				for (ICalendar ical : Biweekly.parse(new String(icsDatei)).all()) {
@@ -118,18 +122,20 @@ public class CalendarInfo {
 						continue;
 					}
 					for (VEvent vEvent : ical.getEvents()) {
-						Entry entry = createEntryOf(vEvent);
-						entry.setColor(url.getColor());
-						if (entry != null) {
-							result.add(entry);
+						List<Entry> entries = createEntriesOf(vEvent);
+						for (Entry entry: entries) {
+							entry.setColor(url.getColor());
+						}
+						if ( entries != null) {
+							result.addAll(entries);
 						}
 					}
 				}
 			} catch (IOException e) {
 				log.warning("No Calendar for " + url.getDescription() + e.getLocalizedMessage());
 			}
-		});
-		log.info("createEntries " + url + " : " + millis + " millis");
+		// });
+		// log.info("createEntries " + url + " : " + millis + " millis");
 
 		return result;
 
@@ -154,16 +160,16 @@ public class CalendarInfo {
 		return content.toString();
 	}
 
-	private static Entry createEntryOf(VEvent vEvent) {
-		Entry result = new Entry(UUID.randomUUID().toString());
+	private static List<Entry> createEntriesOf(VEvent vEvent) {
+		Entry entry = new Entry(UUID.randomUUID().toString());
 		
 		ICalDate dateStartValue = vEvent.getDateStart().getValue();
 
 		Instant startInstant = dateStartValue.toInstant();
 		LocalDateTime ldt = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
-		result.setStart(ldt);
+		entry.setStart(ldt);
 
-		result.setAllDay(!dateStartValue.hasTime());
+		entry.setAllDay(!dateStartValue.hasTime());
 
 		DateEnd dateEnd = vEvent.getDateEnd();
 		Instant endInstant = startInstant;
@@ -171,26 +177,26 @@ public class CalendarInfo {
 			endInstant = vEvent.getDateEnd().getValue().toInstant();
 		}
 		LocalDateTime endTime = LocalDateTime.ofInstant(endInstant, ZoneId.systemDefault());
-		result.setEnd(endTime);
+		entry.setEnd(endTime);
 
-		result.setTitle(vEvent.getSummary().getValue());
+		entry.setTitle(vEvent.getSummary().getValue());
 		var description = vEvent.getDescription();
 		if (description != null) {
-			result.setDescription(description.getValue());
+			entry.setDescription(description.getValue());
 		}
 		var location = vEvent.getLocation();
 		if (location != null) {
-			result.setCustomProperty(LOCATION, location.getValue());
+			entry.setCustomProperty(LOCATION, location.getValue());
 			// log.info(LOCATION + " is "+location.getValue());
 		}
 		var uid = vEvent.getUid();
 		if (uid != null) {
-			result.setCustomProperty(UID, uid.getValue());
+			entry.setCustomProperty(UID, uid.getValue());
 			//log.info(UID + " is "+uid.getValue());
 		}
 		var cdate = vEvent.getDateTimeStamp();
 		if (cdate != null) {
-			result.setCustomProperty(CDATE, cdate.getValue());
+			entry.setCustomProperty(CDATE, cdate.getValue());
 			// log.info(CDATE + " is "+cdate.getValue());
 		}
 		
@@ -211,7 +217,7 @@ public class CalendarInfo {
 
 		var url = vEvent.getUrl();
 		if (url != null) {
-			result.setCustomProperty(URL, url.getValue());
+			entry.setCustomProperty(URL, url.getValue());
 			// log.info(URL + " is " +url.getValue());
 		}
 
@@ -224,16 +230,52 @@ public class CalendarInfo {
 			}
 		});
 		
+		var result = new ArrayList<Entry>();
+		result.add(entry);
+		
+		
 		var rrule = vEvent.getRecurrenceRule();
 		if (rrule != null) {
 			log.info("Wiederholungsregel: " + AUtils.getAllGetters(rrule));
 
 			var recurrency = rrule.getValue();
 			log.info("Wiederholung: " + AUtils.getAllGetters(recurrency));
+			
+			Frequency frequency = recurrency.getFrequency();
+			if (Frequency.WEEKLY.equals(frequency)) {
+				log.info("Frequency Weekly: " + frequency);
+				entry.setRecurringDaysOfWeek(DayOfWeek.of(recurrency.getWorkweekStarts().getCalendarConstant()+1));
+				entry.setRecurringStart(LocalDateTime.now().minusDays(36));
+				entry.setRecurringStartTime(entry.getStart().toLocalTime());
+				entry.setRecurringEndTime(entry.getEnd().toLocalTime());
+
+			} else
+			if (Frequency.MONTHLY.equals(frequency)) {
+				log.info("Frequency Monthly: " + frequency);
+				for (int i=1; i<48; i++) {
+					Entry newEntry = entry.copy();
+					newEntry.setStart(entry.getStart().plusMonths(i));
+					newEntry.setEnd(entry.getEnd().plusMonths(i));
+					
+					result.add(newEntry);
+				}
+			} else 
+			if (Frequency.YEARLY.equals(frequency)) {
+				log.info("Frequency Yearly: " + frequency);
+				int startMenge = result.size();
+				for (int i=1; i<10; i++) {
+					Entry newEntry = new Entry();
+					
+					Entry.copy(entry, newEntry, false);
+					newEntry.setStart(entry.getStart().plusYears(i));
+					newEntry.setEnd(entry.getEnd().plusYears(i));
+					
+					result.add(newEntry);
+				}
+				log.info("added " + (result.size() - startMenge) + " entries");
+			}
 		}
 		
-		// result.set
-
 		return result;
 	}
 
