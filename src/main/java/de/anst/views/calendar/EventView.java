@@ -261,7 +261,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onEntryClick(EntryClickedEvent event) {
-		log.info("onEntryClick" + event.toString());
+		log.info("onEntryClick: " + event.toString());
         DemoDialog dialog = new DemoDialog(event.getEntry());
         /*
         dialog.setSaveConsumer(this::onEntryChanged);
@@ -281,7 +281,7 @@ public class EventView extends VerticalLayout {
 	 */
 	protected void onEntryDropped(EntryDroppedEvent event) {
 		event.applyChangesOnEntry();
-		log.info("onEntryDropped" + event.toString());
+		log.info("onEntryDropped: " + event.toString());
 	}
 
 	/**
@@ -293,7 +293,7 @@ public class EventView extends VerticalLayout {
 	 */
 	protected void onEntryResized(EntryResizedEvent event) {
 		event.applyChangesOnEntry();
-		log.info("onEntryResized" + event.toString());
+		log.info("onEntryResized: " + event.toString());
 	}
 
 	/**
@@ -303,7 +303,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onWeekNumberClicked(WeekNumberClickedEvent event) {
-		log.info("onWeekNumberClicked" + event.toString());
+		log.info("onWeekNumberClicked: " + event.toString());
 	}
 
 	/**
@@ -315,10 +315,10 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onDatesRendered(DatesRenderedEvent event) {
-		log.info("onDatesRendered" + event.toString());
+		log.info("onDatesRendered: " + event.toString());
 		if (buttonDatePicker != null) {
 			buttonDatePicker.setText(event.getIntervalStart()
-					.format(DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(Locale.getDefault())));
+					.format(DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(Locale.GERMANY)));
 		}
 	}
 
@@ -329,7 +329,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onViewSkeletonRendered(ViewSkeletonRenderedEvent event) {
-		log.info("onViewSkeletonRendered" + event.toString());
+		log.info("onViewSkeletonRendered: " + event.toString());
 	}
 
 	/**
@@ -339,7 +339,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onTimeslotsSelected(TimeslotsSelectedEvent event) {
-		log.info("onTimeslotsSelected" + event.toString());
+		log.info("onTimeslotsSelected: " + event.toString());
 	}
 
 	/**
@@ -349,7 +349,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onTimeslotClicked(TimeslotClickedEvent event) {
-		log.info("onTimeslotClicked" + event.toString());
+		log.info("onTimeslotClicked: " + event.toString());
 	}
 
 	/**
@@ -359,7 +359,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onMoreLinkClicked(MoreLinkClickedEvent event) {
-		log.info("onMoreLinkClicked" + event.toString());
+		log.info("onMoreLinkClicked: " + event.toString());
 	}
 
 	/**
@@ -371,7 +371,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onBrowserTimezoneObtained(BrowserTimezoneObtainedEvent event) {
-		log.info("onBrowserTimezoneObtained" + event.toString());
+		log.info("onBrowserTimezoneObtained: " + event.toString());
 	}
 
 	/**
@@ -381,7 +381,7 @@ public class EventView extends VerticalLayout {
 	 * @param event event
 	 */
 	protected void onDayNumberClicked(DayNumberClickedEvent event) {
-		log.info("onDayNumberClicked" + event.toString());
+		log.info("onDayNumberClicked: " + event.toString());
 	}
 
 	protected Component createDescriptionElement() {

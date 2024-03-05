@@ -23,7 +23,7 @@ public class SetupDialog extends Dialog {
 	
 	public SetupDialog(Component... components) {
 		setCloseOnEsc(true);
-		setHeaderTitle("Einstellungen");
+		setHeaderTitle("Kalender");
 
 		setCloseOnOutsideClick(true);
 		addThemeVariants(DialogVariant.LUMO_NO_PADDING);

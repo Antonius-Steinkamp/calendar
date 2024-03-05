@@ -45,24 +45,22 @@ import lombok.extern.java.Log;
 @Log
 public class CalendarInfo {
 	/**
-	 * String URL {@value #URL}
-	 * since 22.02.2024
+	 * String URL {@value #URL} since 22.02.2024
 	 */
 	public static final String URL = "Url";
 	/**
-	 * String LOCATION {@value #LOCATION}
-	 * since 22.02.2024
+	 * String LOCATION {@value #LOCATION} since 22.02.2024
 	 */
 	public static final String LOCATION = "Location";
-	
+
 	public static final String UID = "Uid";
 	public static final String CDATE = "CDATE";
-	
+
 	private String url;
 	private String description;
 	private String color;
 	private boolean visible;
-	
+
 	@JsonIgnore
 	private List<Entry> entries = new ArrayList<>();
 
@@ -91,51 +89,38 @@ public class CalendarInfo {
 		log.info("getEntries " + toString());
 		if (entries.isEmpty()) {
 			List<Entry> createEntries = createEntries(this);
-			
+
 			entries.addAll(createEntries);
-			log.info("add " + createEntries.size() +  " Entries");
+			log.info("add " + createEntries.size() + " Entries");
 		}
 
 		return entries;
 	}
 
-	private static long timeTaskMillis(Runnable taskToTime) {
-		long startTime = System.currentTimeMillis();
-		try {
-			taskToTime.run();
-		} catch (Exception ex) {
-			log.info("Task failed " + ex.toString());
-		}
-		return System.currentTimeMillis() - startTime;
-	}
-
 	private static List<Entry> createEntries(CalendarInfo url) {
 
 		List<Entry> result = new ArrayList<>();
-		// long millis = timeTaskMillis(() -> {
-			try {
-				String icsDatei = downloadFileToString(url.getUrl());
-				for (ICalendar ical : Biweekly.parse(new String(icsDatei)).all()) {
+		try {
+			String icsDatei = downloadFileToString(url.getUrl());
+			for (ICalendar ical : Biweekly.parse(new String(icsDatei)).all()) {
 
-					if (ical == null) {
-						log.info("No Calendar for " + url.getDescription());
-						continue;
+				if (ical == null) {
+					log.info("No Calendar for " + url.getDescription());
+					continue;
+				}
+				for (VEvent vEvent : ical.getEvents()) {
+					List<Entry> entries = createEntriesOf(vEvent);
+					for (Entry entry : entries) {
+						entry.setColor(url.getColor());
 					}
-					for (VEvent vEvent : ical.getEvents()) {
-						List<Entry> entries = createEntriesOf(vEvent);
-						for (Entry entry: entries) {
-							entry.setColor(url.getColor());
-						}
-						if ( entries != null) {
-							result.addAll(entries);
-						}
+					if (entries != null) {
+						result.addAll(entries);
 					}
 				}
-			} catch (IOException e) {
-				log.warning("No Calendar for " + url.getDescription() + e.getLocalizedMessage());
 			}
-		// });
-		// log.info("createEntries " + url + " : " + millis + " millis");
+		} catch (IOException e) {
+			log.warning("No Calendar for " + url.getDescription() + e.getLocalizedMessage());
+		}
 
 		return result;
 
@@ -160,13 +145,15 @@ public class CalendarInfo {
 		return content.toString();
 	}
 
+	private static ZoneId usedZoneId = ZoneId.of("Europe/Berlin");
+	
 	private static List<Entry> createEntriesOf(VEvent vEvent) {
 		Entry entry = new Entry(UUID.randomUUID().toString());
-		
+
 		ICalDate dateStartValue = vEvent.getDateStart().getValue();
 
 		Instant startInstant = dateStartValue.toInstant();
-		LocalDateTime ldt = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
+		LocalDateTime ldt = LocalDateTime.ofInstant(startInstant, usedZoneId);
 		entry.setStart(ldt);
 
 		entry.setAllDay(!dateStartValue.hasTime());
@@ -176,7 +163,7 @@ public class CalendarInfo {
 		if (dateEnd != null) {
 			endInstant = vEvent.getDateEnd().getValue().toInstant();
 		}
-		LocalDateTime endTime = LocalDateTime.ofInstant(endInstant, ZoneId.systemDefault());
+		LocalDateTime endTime = LocalDateTime.ofInstant(endInstant, usedZoneId);
 		entry.setEnd(endTime);
 
 		entry.setTitle(vEvent.getSummary().getValue());
@@ -192,24 +179,24 @@ public class CalendarInfo {
 		var uid = vEvent.getUid();
 		if (uid != null) {
 			entry.setCustomProperty(UID, uid.getValue());
-			//log.info(UID + " is "+uid.getValue());
+			// log.info(UID + " is "+uid.getValue());
 		}
 		var cdate = vEvent.getDateTimeStamp();
 		if (cdate != null) {
 			entry.setCustomProperty(CDATE, cdate.getValue());
 			// log.info(CDATE + " is "+cdate.getValue());
 		}
-		
+
 		var comments = vEvent.getComments();
-		if (comments != null ) {
+		if (comments != null) {
 			comments.forEach(c -> log.info(c.toString()));
 		}
-		
+
 		var attendees = vEvent.getAttendees();
 		if (attendees != null) {
 			attendees.forEach((c -> log.info(c.toString())));
 		}
-		
+
 		var attachments = vEvent.getAttachments();
 		if (attachments != null) {
 			attachments.forEach((c -> log.info(c.toString())));
@@ -225,57 +212,54 @@ public class CalendarInfo {
 		rrdate.forEach(r -> {
 			log.info("Wiederholungstermine: " + AUtils.getAllGetters(r));
 			List<Period> periods = r.getPeriods();
-			for (Period period: periods) {
-				log.info("Periaod: " + AUtils.getAllGetters(period) );
+			for (Period period : periods) {
+				log.info("Periaod: " + AUtils.getAllGetters(period));
 			}
 		});
-		
+
 		var result = new ArrayList<Entry>();
 		result.add(entry);
-		
-		
+
 		var rrule = vEvent.getRecurrenceRule();
 		if (rrule != null) {
 			log.info("Wiederholungsregel: " + AUtils.getAllGetters(rrule));
 
 			var recurrency = rrule.getValue();
 			log.info("Wiederholung: " + AUtils.getAllGetters(recurrency));
-			
+
 			Frequency frequency = recurrency.getFrequency();
 			if (Frequency.WEEKLY.equals(frequency)) {
 				log.info("Frequency Weekly: " + frequency);
-				entry.setRecurringDaysOfWeek(DayOfWeek.of(recurrency.getWorkweekStarts().getCalendarConstant()+1));
+				entry.setRecurringDaysOfWeek(DayOfWeek.of(recurrency.getWorkweekStarts().getCalendarConstant() + 1));
 				entry.setRecurringStart(LocalDateTime.now().minusDays(36));
 				entry.setRecurringStartTime(entry.getStart().toLocalTime());
 				entry.setRecurringEndTime(entry.getEnd().toLocalTime());
 
-			} else
-			if (Frequency.MONTHLY.equals(frequency)) {
+			} else if (Frequency.MONTHLY.equals(frequency)) {
 				log.info("Frequency Monthly: " + frequency);
-				for (int i=1; i<48; i++) {
+				for (int i = 1; i < 48; i++) {
 					Entry newEntry = entry.copy();
 					newEntry.setStart(entry.getStart().plusMonths(i));
 					newEntry.setEnd(entry.getEnd().plusMonths(i));
-					
+
 					result.add(newEntry);
 				}
-			} else 
-			if (Frequency.YEARLY.equals(frequency)) {
+			} else if (Frequency.YEARLY.equals(frequency)) {
 				log.info("Frequency Yearly: " + frequency);
 				int startMenge = result.size();
-				for (int i=1; i<10; i++) {
+				for (int i = 1; i < 10; i++) {
 					Entry newEntry = new Entry();
-					
+
 					Entry.copy(entry, newEntry, false);
 					newEntry.setStart(entry.getStart().plusYears(i));
 					newEntry.setEnd(entry.getEnd().plusYears(i));
-					
+
 					result.add(newEntry);
 				}
 				log.info("added " + (result.size() - startMenge) + " entries");
 			}
 		}
-		
+
 		return result;
 	}
 

@@ -197,4 +197,14 @@ public class AUtils {
         // Beispiel: getUserName -> userName
         return methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
     }
+    
+	public static long timeTaskMillis(Runnable taskToTime) {
+		long startTime = System.currentTimeMillis();
+		try {
+			taskToTime.run();
+		} catch (Exception ex) {
+			log.info("Task failed " + ex.toString());
+		}
+		return System.currentTimeMillis() - startTime;
+	}
 }

@@ -2,6 +2,7 @@ package de.anst.views.about;
 
 import java.text.DecimalFormat;
 import java.util.Locale;
+import java.util.TimeZone;
 
 import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.UI;
@@ -65,7 +66,7 @@ public class AboutView extends VerticalLayout {
 			// isnich
 		}
 
-		add(createHtml("Browserlocale: " + UI.getCurrent().getLocale() + " Systemlocale " + Locale.getDefault()));
+		add(createHtml("Browserlocale: " + UI.getCurrent().getLocale() + " Systemlocale " + Locale.getDefault() + " Zoneid is " + TimeZone.getDefault().toZoneId()));
 		add(createHtml("Java Version " + System.getProperty("java.version") + " " + System.getProperty("java.vm.name")
 				+ " " + System.getProperty("java.vm.version") + " " + System.getProperty("java.vm.vendor")));
 		add(createHtml("OS " + System.getProperty("os.name") + " " + System.getProperty("os.version") + " "
